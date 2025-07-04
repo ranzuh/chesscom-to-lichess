@@ -5,7 +5,7 @@ A simple FastHTML app that fetches your latest games from Chess.com and provides
 ## Installation
 
 ```bash
-pip install fasthtml python-dotenv
+pip install fasthtml python-dotenv parse
 ```
 
 ## Usage
