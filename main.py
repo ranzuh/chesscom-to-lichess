@@ -51,7 +51,13 @@ def get_list(chessuser: str):
         # send a POST request to /lichess with pgn as request parameter
         link = A("Analyse in Lichess", hx_post="/lichess", hx_vals={"pgn": game["pgn"]})
         list_items.append(Li(Span(title, cls="title"), link))
-    return list_items
+    clear_input = Input(
+        id="user",
+        name="chessuser",
+        placeholder="Enter your Chess.com username",
+        hx_swap_oob="true",  # replaces the input element with this
+    )
+    return list_items, clear_input
 
 
 @app.post("/lichess")
