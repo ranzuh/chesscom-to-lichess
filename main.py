@@ -5,60 +5,64 @@ import os
 from datetime import datetime
 import parse
 
-
 load_dotenv()
 
 app = FastHTML(hdrs=(picolink, StyleX("styles.css")))
 
-
 @app.get("/")
 def home():
-    inp = Input(
-        id="user", name="chessuser", placeholder="Enter your Chess.com username"
-    )
-    form = Form(Group(inp, Button("Fetch")), hx_post="/games", target_id="games-list")
+    inp = Input(id="user", name="chessuser", placeholder="Enter your Chess.com username")
+    form = Form(Group(inp, Button("Fetch")), hx_post="/games", target_id="table-body")
     info = P("Fetch your latest Chess.com games and analyse them easily in Lichess.")
-    return Titled("Chess.com to Lichess", info, form, Ul(id="games-list"))
-
+    table = Table(Thead(id="table-head"), Tbody(id="table-body"))
+    return Titled("Chess.com to Lichess", info, form, table)
 
 def fetch_latest_games(username: str) -> list[dict]:
-    date = datetime.now()
-    year_and_month = date.strftime("%Y/%m")
+    year_and_month = datetime.now().strftime("%Y/%m")
     url = f"https://api.chess.com/pub/player/{username}/games/{year_and_month}"
-    res = httpx.get(url)
-    res_dict = res.json()
-    games: list[dict] = res_dict["games"]
+    res = httpx.get(url).json()
+    games: list[dict] = res["games"]
+    # reverse to have latest games first
     games.reverse()
     return games
 
-
-def get_title(game: dict) -> str:
+def get_columns(game: dict):
     headers = parse.findall('[{} "{}"]', game["pgn"])
     headers = {r[0]: r[1] for r in headers}
     date = headers["Date"]
     dt = datetime.strptime(date, "%Y.%m.%d")
     new_date = dt.strftime("%b %-d %Y")
-    title = f"{new_date}, {headers["White"]} vs {headers["Black"]}, {headers["Result"]}"
-    return title
-
+    columns = [
+        Td(new_date),
+        Td(f"{headers["White"]} vs {headers["Black"]}"),
+        Td(headers["Result"]),
+    ]
+    return columns
 
 @app.post("/games")
-def get_list(chessuser: str):
+def update_table(chessuser: str):
     games = fetch_latest_games(chessuser)
-    list_items = []
+    rows = []
     for game in games:
-        title = get_title(game)
+        columns = get_columns(game)
         # send a POST request to /lichess with pgn as request parameter
         link = A("Analyse in Lichess", hx_post="/lichess", hx_vals={"pgn": game["pgn"]})
-        list_items.append(Li(Span(title, cls="title"), link))
+        rows.append(Tr(*columns, Td(link)))
+    # htmx requires to use <template> here as <thead> "can’t stand on their own in the DOM"
+    header = Template(
+        Thead(
+            Tr(Th("Date"), Th("Players"), Th("Result"), Th("")),
+            id="table-head",
+            hx_swap_oob="true",  # swap <thead> with this element
+        )
+    )
     clear_input = Input(
         id="user",
         name="chessuser",
         placeholder="Enter your Chess.com username",
-        hx_swap_oob="true",  # replaces the input element with this
+        hx_swap_oob="true",  # replaces the <input> with this element
     )
-    return list_items, clear_input
-
+    return rows, header, clear_input
 
 @app.post("/lichess")
 def paste_to_lichess(pgn: str):
@@ -66,10 +70,7 @@ def paste_to_lichess(pgn: str):
     lichess_token = os.getenv("LICHESS_API_TOKEN")
     headers = {"Authorization": f"Bearer {lichess_token}"}
     data = {"pgn": pgn}
-    res = httpx.post(url, headers=headers, json=data)
-    res_dict = res.json()
-    url = res_dict["url"]
-    return Redirect(url)
-
+    res = httpx.post(url, headers=headers, json=data).json()
+    return Redirect(res["url"])
 
 serve()
