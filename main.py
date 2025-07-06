@@ -15,7 +15,7 @@ def home():
     form = Form(Group(inp, Button("Fetch")), hx_post="/games", target_id="table-body")
     info = P("Fetch your latest Chess.com games and analyse them easily in Lichess.")
     table = Table(Thead(id="table-head"), Tbody(id="table-body"))
-    return Titled("Chess.com to Lichess", info, form, table)
+    return Titled("Chess.com to Lichess", info, form, table, cls="container-fluid")
 
 def fetch_latest_games(username: str) -> list[dict]:
     year_and_month = datetime.now().strftime("%Y/%m")
@@ -46,7 +46,7 @@ def update_table(chessuser: str):
     for game in games:
         columns = get_columns(game)
         # send a POST request to /lichess with pgn as request parameter
-        link = A("Analyse in Lichess", hx_post="/lichess", hx_vals={"pgn": game["pgn"]})
+        link = A("Analyse", hx_post="/lichess", hx_vals={"pgn": game["pgn"]})
         rows.append(Tr(*columns, Td(link)))
     # htmx requires to use <template> here as <thead> "can’t stand on their own in the DOM"
     header = Template(
