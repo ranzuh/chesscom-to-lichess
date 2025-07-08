@@ -13,3 +13,8 @@ pip install fasthtml python-dotenv parse
 ```bash
 python main.py
 ````
+
+## To Do
+
+- [ ] Add infinite scroll or load more rows functionality to the games table
+- [ ] Add filters for eg. time control, dates?
